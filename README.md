@@ -308,6 +308,7 @@ https://api.yourdomain.com/openapi.json
 - Python
 - FastAPI
 - SQLAlchemy
+- uvicorn
 - Swagger/OpenAPI
 - Docker
 
@@ -337,7 +338,8 @@ pip install uvicorn
 ### Run Application
 
 ```bash
-dotnet run
+fastapi dev
+uvicorn app:app --reload
 ```
 
 API will be available at:

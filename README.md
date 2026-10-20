@@ -326,13 +326,27 @@ cd ISOContainerCodeAPI
 ### Install Dependencies
 
 ```bash
-# Create virtual enviroment
+# Create virtual enviroment windows
 python3 -m venv env
 .\env\Scripts\activate
 
 pip install "fastapi[standard]"
 pip install SQLAlchemy 
 pip install uvicorn
+
+# Create virtual enviroment linux
+python3 -m venv env
+
+source ./env/bin/activate
+
+
+pip3 install "fastapi[standard]"
+pip3 install SQLAlchemy 
+pip3 install uvicorn
+
+pip3 freeze > requirements.txt
+
+pip3 install -r requirements.txt
 ```
 
 ### Run Application

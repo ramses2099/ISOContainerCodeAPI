@@ -305,9 +305,9 @@ https://api.yourdomain.com/openapi.json
 
 ## Technology Stack
 
-- .NET 8 Web API
-- Entity Framework Core
-- SQL Server
+- Python
+- FastAPI
+- SQLAlchemy
 - Swagger/OpenAPI
 - Docker
 
@@ -318,14 +318,20 @@ https://api.yourdomain.com/openapi.json
 ### Clone Repository
 
 ```bash
-git clone https://github.com/your-org/iso-container-api.git
-cd iso-container-api
+git clone https://github.com/ramses2099/ISOContainerCodeAPI
+cd ISOContainerCodeAPI
 ```
 
 ### Install Dependencies
 
 ```bash
-dotnet restore
+# Create virtual enviroment
+python3 -m venv env
+.\env\Scripts\activate
+
+pip install "fastapi[standard]"
+pip install SQLAlchemy 
+pip install uvicorn
 ```
 
 ### Run Application

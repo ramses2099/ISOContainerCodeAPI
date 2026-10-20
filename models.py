@@ -12,3 +12,12 @@ class ISOContainerType(Base):
     length = Column(Integer) 
     height = Column(DECIMAL)
     group = Column(String)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)

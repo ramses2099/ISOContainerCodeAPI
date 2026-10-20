@@ -21,19 +21,68 @@ ISOContainerAPI provides a simple and reliable interface for accessing container
 ## Base URL
 
 ```http
-https://api.yourdomain.com/api/v1
+http://127.0.0.1:8000
 ```
 
 ---
 
 ## Authentication
 
-All requests require an API key.
+The implemented container lookup routes require a JWT access token.
 
-### Header
+1. Activate the virtual environment and install dependencies:
 
-```http
-Authorization: Bearer YOUR_API_KEY
+```bash
+source env/bin/activate
+pip install -r requirements.txt
+```
+
+2. Copy `.env.example` to `.env`. Generate a signing secret with `openssl rand -hex 32`
+   and set `JWT_SECRET_KEY` in `.env` to that value. Keep `.env` private (it is ignored
+   by Git), and use the same secret across restarts and server instances. The API
+   refuses to start without a secret of at least 32 bytes.
+
+3. Create an account (password is prompted and stored as an Argon2 hash):
+
+```bash
+python create_user.py admin
+```
+
+4. Start the API:
+
+```bash
+uvicorn app:app --reload
+```
+
+5. Request a token using form data:
+
+```bash
+curl -X POST http://127.0.0.1:8000/token \
+  -d 'username=admin' \
+  --data-urlencode 'password=YOUR_PASSWORD'
+```
+
+The response contains `access_token` and `token_type`. Tokens expire after 30 minutes;
+log in again to obtain another token. Refresh tokens are not implemented.
+
+```bash
+curl http://127.0.0.1:8000/isocontainertypesbycode/22G1 \
+  -H 'Authorization: Bearer YOUR_ACCESS_TOKEN'
+```
+
+Both `/isocontainertypesbygkey/{gkey}` and `/isocontainertypesbycode/{code}`
+require authentication. Missing, invalid, or expired tokens return HTTP 401.
+Disabling a user in the database rejects their existing tokens immediately.
+Use HTTPS in production. JWT payloads are signed, not encrypted; do not put
+passwords or other secrets in them.
+
+Swagger UI is available at `http://127.0.0.1:8000/docs`; use **Authorize** to log in.
+The other endpoints documented below describe planned functionality.
+
+Run the authentication tests against an isolated in-memory database:
+
+```bash
+python -m unittest discover -s tests -v
 ```
 
 ---
@@ -260,7 +309,7 @@ GET /equipment
 ```bash
 curl --request GET \
   --url https://api.yourdomain.com/api/v1/owners/MAEU \
-  --header "Authorization: Bearer YOUR_API_KEY"
+  --header "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ---
@@ -270,13 +319,13 @@ curl --request GET \
 ### Swagger UI
 
 ```text
-https://api.yourdomain.com/swagger
+http://127.0.0.1:8000/docs
 ```
 
 ### OpenAPI Specification
 
 ```text
-https://api.yourdomain.com/openapi.json
+http://127.0.0.1:8000/openapi.json
 ```
 
 ---
@@ -325,42 +374,96 @@ cd ISOContainerCodeAPI
 
 ### Install Dependencies
 
+Run all commands from the repository root. Use a Python version compatible with
+`requirements.txt` (the current dependencies were tested with Python 3.14).
+
+Linux / macOS:
+
 ```bash
-# Create virtual enviroment windows
 python3 -m venv env
-.\env\Scripts\activate
-
-pip install "fastapi[standard]"
-pip install SQLAlchemy 
-pip install uvicorn
-
-# Create virtual enviroment linux
-python3 -m venv env
-
-source ./env/bin/activate
-
-
-pip3 install "fastapi[standard]"
-pip3 install SQLAlchemy 
-pip3 install uvicorn
-
-pip3 freeze > requirements.txt
-
-pip3 install -r requirements.txt
+source env/bin/activate
+python -m pip install -r requirements.txt
 ```
+
+Windows PowerShell:
+
+```powershell
+python -m venv env
+.\env\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+### Configure JWT Authentication
+
+Copy `.env.example` to `.env` (Linux/macOS: `cp .env.example .env`;
+PowerShell: `Copy-Item .env.example .env`). Generate a signing secret:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Paste the generated value into `.env`:
+
+```dotenv
+JWT_SECRET_KEY=PASTE_YOUR_GENERATED_SECRET_HERE
+```
+
+Keep this secret private and stable across restarts. Environment variables take
+precedence over `.env`. The application will refuse to start if the secret is
+missing or shorter than 32 bytes.
+
+Create your login account; enter and confirm a password of at least 12 characters:
+
+```bash
+python create_user.py admin
+```
+
+This creates the `users` table if necessary and stores a password hash in
+`db/database.db`. It does not create default credentials.
 
 ### Run Application
 
 ```bash
-fastapi dev
-uvicorn app:app --reload
+uvicorn app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-API will be available at:
+- API: http://127.0.0.1:8000
+- Swagger UI: http://127.0.0.1:8000/docs
+- OpenAPI schema: http://127.0.0.1:8000/openapi.json
 
-```text
-https://localhost:5001
+Open Swagger UI, click **Authorize**, enter the account credentials, and try the
+container lookup endpoints. The root URL `/` has no endpoint and returns 404.
+Stop the development server with Ctrl+C. On subsequent starts, activate `env` and
+run the same `uvicorn` command; reuse the existing `.env` and account.
+
+### Test the API
+
+With the server running, request a token (replace `YOUR_PASSWORD`):
+
+```bash
+curl -X POST http://127.0.0.1:8000/token \
+  -d "username=admin" \
+  --data-urlencode "password=YOUR_PASSWORD"
 ```
+
+Copy the response's `access_token` into the following command:
+
+```bash
+curl http://127.0.0.1:8000/isocontainertypesbycode/22G1 \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+The lookup returns 200 and the container record when that code exists in your
+database, or 404 when it does not. Missing, invalid, and expired tokens return 401.
+On Windows PowerShell use `curl.exe` and put each command on one line.
+
+Run the automated tests without starting the server:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+These tests use an isolated database and leave your application data unchanged.
 
 ---
 
